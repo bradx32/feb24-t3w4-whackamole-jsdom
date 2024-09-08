@@ -14,12 +14,33 @@ let gameRunningInfoContainer = document.getElementById("gameRunningInfo");
 let gamePlayContainer = document.getElementById("gameplayArea");
 let spawnableAreas = document.getElementsByClassName("whackamoleSpawnArea");
 let spawningInterval = null;
+let fastSpawningInterval = null;
+let despawnerInterval = null;
 
 // because of function hoisting, we can call these functions before they are declared!
 // These are called as soon as the page loads:
 toggleGameControlButtons();
 toggleGameplayContent();
 updateHighScore();
+
+Array.from(spawnableAreas).forEach(area => {
+	area.addEventListener("click", (event) => {
+		whackamoleHandleClick(event);
+	});
+});
+
+
+
+function toggleCursor(){
+	let bodyElement = document.getElementsByTagName("body")[0];
+	if (gameTimeRemaining > 0) {
+		bodyElement.style.cursor = 'url(./assets/Hammer.gif), auto';
+	} else {
+		bodyElement.style.cursor = "";
+	}
+}
+
+
 
 // Game Score and Timer 
 
@@ -37,6 +58,11 @@ function gameTimeStep(){
 
 
 async function spawnMole(){
+	// handle the bug where a pokemon appears once after the game is over 
+	if (gameTimeRemaining <= 0){
+		return;
+	}
+
 	// pick a random spawnable area
 	let randomNumberWithinArrayRange = Math.floor(Math.random() * spawnableAreas.length);
 	let chosenSpawnArea = spawnableAreas[randomNumberWithinArrayRange];
@@ -59,10 +85,30 @@ async function spawnMole(){
 function wipeImagesFromSpawningAreas(){
 	// loop through spawnableAreas
 	// set the src property of each thing to ""
-	spawnableAreas.forEach(area => {
+	console.log(spawnableAreas);
+	Array.from(spawnableAreas).forEach(area => {
 		area.src = "";
 	});
 }
+
+function whackamoleHandleClick(event){
+	if (event.target.src != ""){
+		currentGameScore++;
+		event.target.src = "";
+		console.log("Clicked on a mole! Score increased, it's now: " + currentGameScore);
+	}
+}
+
+
+function deleteRandomWhackamole(){
+	// pick one random spawnableArea
+	let randomNumberWithinArrayRange = Math.floor(Math.random() * spawnableAreas.length);
+	let chosenSpawnArea = spawnableAreas[randomNumberWithinArrayRange];
+
+	// set its src property to ""
+	chosenSpawnArea.src = "";
+}
+
 
 
 
@@ -161,11 +207,14 @@ function startGame(desiredGameTime = defaultGameDuration){
 	// isGameRunning = true;
 	console.log("Started the game. Game time remaining is now: " + gameTimeRemaining);
 
+	currentGameScore = 0;
 	wipeImagesFromSpawningAreas();
 	// toggle game controls
 	toggleGameControlButtons();
 	// toggle game content
 	toggleGameplayContent();
+	// toggle the cursor
+	toggleCursor();
 
 	gameCountdownInterval = setInterval(() => {
 		gameTimeRemaining -= 1;
@@ -187,7 +236,13 @@ function startGame(desiredGameTime = defaultGameDuration){
 	spawningInterval = setInterval(() => {
 		spawnMole();
 	}, 1000);
-
+	fastSpawningInterval = setInterval(() => {
+		spawnMole();
+	}, 500);
+	// Randomly despawn or delete a whackamole from the game
+	despawnerInterval = setInterval(() => {
+		deleteRandomWhackamole();	
+	}, 500);
 
 }
 
@@ -201,12 +256,17 @@ function stopGame(){
 	clearInterval(gameCountdownInterval);
 	clearInterval(gameUpdateInterval);
 	clearInterval(spawningInterval);
+	clearInterval(fastSpawningInterval);
+	clearInterval(despawnerInterval);
 	gameTimeStep();
 
 	// toggle game controls
 	toggleGameControlButtons();
 	// toggle game content
-	toggleGameplayContent();
+	// toggleGameplayContent();
+	wipeImagesFromSpawningAreas();
+	// toggle the cursor
+	toggleCursor();
 
 	console.log("Stopped the game. Game time remaining is now: " + gameTimeRemaining);
 }
